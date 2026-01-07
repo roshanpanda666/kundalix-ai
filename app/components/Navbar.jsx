@@ -33,7 +33,7 @@ export default function Navbar() {
               
 
               <div className="hover:text-cyan-500">
-                <Link href="/createkundali">
+                <Link href="/create-kundali">
                     create kundali
                 </Link>
                 
