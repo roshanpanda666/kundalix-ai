@@ -1,6 +1,8 @@
 "use client";
 import { useRef } from "react";
 
+import {thirdfunction} from "../actions/action3"
+
 export default function RegisterForm() {
   const usernameRef = useRef(null);
   const emailRef = useRef(null);
@@ -28,11 +30,26 @@ export default function RegisterForm() {
     let tob=tobRef.current.value;
     let place=placeRef.current.value;
 
+    alert(username)
+    alert(email)
+    alert(password)
     alert(name)
     alert(dob)
     alert(tob)
     alert(place)
 
+    await thirdfunction({
+      input1:String(username),
+      input2:String(email),
+      input3:String(password),
+      input4:String(name),
+      input5:String(dob),
+      input6:String(tob),
+      input7:String(place),
+    })
+
+    
+    
     usernameRef.current.value = "";
     emailRef.current.value = "";
     passwordRef.current.value = "";
@@ -122,6 +139,7 @@ export default function RegisterForm() {
         >
           Register
         </button>
+
       </form>
     </div>
   );

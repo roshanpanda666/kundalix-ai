@@ -1,34 +1,85 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-
-import { User } from "../../lib/model/schema";
 import { connectionSRT } from "../../lib/db";
+import { User } from "../../lib/model/schema";
 
 export async function POST(request) {
   try {
-    await mongoose.connect(connectionSRT);
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(connectionSRT);
+    }
 
-    const payload = await request.json();
+    const { user, birthDetails, kundali, meta } = await request.json();
 
-    // 🔐 HASH PASSWORD ON SERVER
-    const hashedPassword = await bcrypt.hash(payload.password, 10);
+    // 🛑 HARD VALIDATION
+    if (
+      !user ||
+      !user.username ||
+      !user.email ||
+      !user.password ||
+      !birthDetails ||
+      !birthDetails.fullName ||
+      !birthDetails.dateOfBirth ||
+      !birthDetails.timeOfBirth ||
+      !birthDetails.placeOfBirth ||
+      !kundali ||
+      !meta
+    ) {
+      console.error("INVALID PAYLOAD:", {
+        user,
+        birthDetails,
+        kundali,
+        meta,
+      });
 
-    const user = new User({
-      username: payload.username,
-      email: payload.email,
+      return NextResponse.json(
+        { success: false, error: "Invalid payload structure" },
+        { status: 400 }
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(String(user.password), 10);
+
+    const newUser = new User({
+      username: user.username,
+      email: user.email,
       password: hashedPassword,
-      name:payload.name,
-      dob:payload.dob,
-      tob:payload.tob,
-      place:payload.place,
+
+      name: birthDetails.fullName,
+      dob: birthDetails.dateOfBirth,
+      tob: birthDetails.timeOfBirth,
+      place: birthDetails.placeOfBirth,
+
+      kundaliSnapshots: [
+        {
+          generatedAt: meta.generatedAt || new Date(),
+          model: meta.model || "gemini-2.5-flash",
+          meta: { system: meta.system || "vedic" },
+
+          birthDetails,
+          basicProfile: kundali.basicProfile || {},
+          planetaryPositions: kundali.planetaryPositions || {},
+          houses: kundali.houses || {},
+          yogas: kundali.yogas || [],
+          lifeDomains: kundali.lifeDomains || {},
+          guidance: kundali.guidance || {},
+        },
+      ],
     });
 
-    await user.save();
+    await newUser.save();
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      message: "User created with kundali snapshot",
+    });
   } catch (err) {
-    console.error(err);
+    console.error("DB INSERT ERROR FULL:", {
+      message: err.message,
+      name: err.name,
+      stack: err.stack,
+    });
 
     if (err.code === 11000) {
       return NextResponse.json(
