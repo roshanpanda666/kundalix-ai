@@ -21,34 +21,17 @@ export default function RegisterForm() {
     const username = usernameRef.current.value;
     const email = emailRef.current.value;
     const password = passwordRef.current.value; // ✅ RAW password
+
+
     let name=nameRef.current.value;
     let dob=dobRef.current.value;
     let tob=tobRef.current.value;
     let place=placeRef.current.value;
 
-    const response = await fetch("/api/userregister", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username,
-        email,
-        password,
-        name,
-        dob,
-        tob,
-        place,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      alert("Data successfully added 🚀");
-    } else {
-      alert("Data entry failed ❌");
-    }
+    alert(name)
+    alert(dob)
+    alert(tob)
+    alert(place)
 
     usernameRef.current.value = "";
     emailRef.current.value = "";
