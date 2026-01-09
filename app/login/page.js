@@ -26,7 +26,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push("/see-kundali");
   };
 
   return (
