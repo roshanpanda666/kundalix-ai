@@ -3,22 +3,35 @@ import { NextResponse } from "next/server";
 
 export default withAuth(
   function middleware(req) {
-    const isLoggedIn = !!req.nextauth.token;
+    const token = req.nextauth.token;
     const { pathname } = req.nextUrl;
 
-    if (isLoggedIn && (pathname === "/login" || pathname === "/userregister")) {
+    // ✅ If logged in, block login & register pages
+    if (
+      token &&
+      (pathname === "/login" || pathname === "/userregister")
+    ) {
       return NextResponse.redirect(new URL("/see-kundali", req.url));
     }
+
+    // otherwise let it pass
+    return NextResponse.next();
   },
   {
     callbacks: {
       authorized: ({ token, req }) => {
         const { pathname } = req.nextUrl;
 
-        if (pathname === "/login" || pathname === "/userregister") {
+        // ✅ PUBLIC ROUTES
+        if (
+          pathname === "/" ||
+          pathname === "/login" ||
+          pathname === "/userregister"
+        ) {
           return true;
         }
 
+        // 🔒 PROTECTED ROUTES
         return !!token;
       },
     },
