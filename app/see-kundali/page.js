@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function KundaliPage() {
@@ -57,6 +58,22 @@ export default function KundaliPage() {
         <p className="text-white/60">
           Vedic Kundali Overview
         </p>
+
+        <div className="flex justify-center items-center">
+
+        <div className="h-12 rounded-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 w-80 flex justify-center items-center">
+            <Link href="/chat-ved">
+            <dev className="text-white">
+                <button>
+                    chat about these information with ai
+                </button>
+            </dev>
+            </Link>
+            
+        </div>
+
+        </div>
+
       </div>
 
       {/* BIRTH DETAILS */}

@@ -36,6 +36,13 @@ export default function Navbar() {
                 See Kundali
               </Link>
 
+              <Link
+                href="/chat-ved"
+                className="text-fuchsia-400/80 hover:text-purple-500 transition"
+              >
+                chat with ved
+              </Link>
+
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
                 className="px-4 py-1.5 rounded-lg bg-red-500/80 text-white text-sm hover:bg-red-600 transition"
@@ -91,6 +98,16 @@ export default function Navbar() {
               >
                 See Kundali
               </Link>
+
+              <Link
+                href="/chat-ved"
+                onClick={() => setOpen(false)}
+                className="block text-fuchsia-400/80"
+              >
+                chat with ved
+              </Link>
+
+              
 
               <button
                 onClick={() => {

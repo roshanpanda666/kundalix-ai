@@ -14,10 +14,15 @@ export default function RegisterForm() {
   const tobRef = useRef(null);
   const placeRef = useRef(null);
 
-  // 🔒 NEW LOGIC STATE
+  // 🔒 EXISTING STATE
   const [showModal, setShowModal] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(50);
+  const [timeLeft, setTimeLeft] = useState(40);
   const [locked, setLocked] = useState(false);
+
+  // 🧠 NEW: FACT STATE (ONLY ADDITION)
+  const [fact, setFact] = useState(
+    "Aligning planets and decoding cosmic patterns… 🌌"
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,7 +40,7 @@ export default function RegisterForm() {
     let tob = tobRef.current.value;
     let place = placeRef.current.value;
 
-    // keeping your alerts as-is
+    // keeping alerts untouched
     alert(username);
     alert(email);
     alert(password);
@@ -58,7 +63,7 @@ export default function RegisterForm() {
       console.error(err);
     }
 
-    // form reset stays untouched
+    // form reset untouched
     usernameRef.current.value = "";
     emailRef.current.value = "";
     passwordRef.current.value = "";
@@ -68,7 +73,7 @@ export default function RegisterForm() {
     placeRef.current.value = "";
   };
 
-  // ⏱️ TIMER EFFECT
+  // ⏱️ EXISTING TIMER EFFECT
   useEffect(() => {
     if (!showModal) return;
 
@@ -84,9 +89,34 @@ export default function RegisterForm() {
     return () => clearTimeout(timer);
   }, [showModal, timeLeft, router]);
 
+  // 🔮 NEW: FACT ROTATION EFFECT (EVERY 4 SECONDS)
+  useEffect(() => {
+    if (!showModal) return;
+
+    const fetchFact = async () => {
+      try {
+        const res = await fetch(
+          "https://uselessfacts.jsph.pl/api/v2/facts/random"
+        );
+        const data = await res.json();
+        setFact(data.text);
+      } catch {
+        setFact(
+          "Vedic astrology has guided human destiny for over 5000 years ✨"
+        );
+      }
+    };
+
+    fetchFact(); // initial fact
+
+    const interval = setInterval(fetchFact, 8000);
+
+    return () => clearInterval(interval);
+  }, [showModal]);
+
   return (
     <>
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#020617] via-[#020617] to-[#020617]">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#020617] via-[#020617] to-[#020617] mt-3">
         <form
           onSubmit={handleSubmit}
           className="
@@ -103,13 +133,82 @@ export default function RegisterForm() {
             Create Account
           </h2>
 
-          <input type="text" placeholder="Username" ref={usernameRef} required className="w-full mb-4 px-4 py-2 rounded-lg bg-white/5 text-white" />
-          <input type="email" placeholder="Email" ref={emailRef} required className="w-full mb-4 px-4 py-2 rounded-lg bg-white/5 text-white" />
-          <input type="password" placeholder="Password" ref={passwordRef} required className="w-full mb-6 px-4 py-2 rounded-lg bg-white/5 text-white" />
-          <input type="text" placeholder="Full name" ref={nameRef} required className="w-full mb-6 px-4 py-2 rounded-lg bg-white/5 text-white" />
-          <input type="date" ref={dobRef} required className="w-full mb-6 px-4 py-2 rounded-lg bg-white/5 text-white" />
-          <input type="time" ref={tobRef} required className="w-full mb-6 px-4 py-2 rounded-lg bg-white/5 text-white" />
-          <input type="text" placeholder="place of birth" ref={placeRef} required className="w-full mb-6 px-4 py-2 rounded-lg bg-white/5 text-white" />
+          <div className="flex flex-col justify-center items-center mb-4">
+            <div className="text-gray-400 flex flex-col text-center">
+              <span className="text-2xl">
+                Register yourself by filling your details
+              </span>
+              <span className="mt-1.5 text-gray-500 mb-1.5">
+                These details will be used while creating your Kundali
+              </span>
+            </div>
+          </div>
+
+          <input
+            type="text"
+            placeholder="Username"
+            ref={usernameRef}
+            required
+            className="w-full mb-4 px-4 py-2 rounded-lg bg-white/5 text-white"
+          />
+
+          <input
+            type="email"
+            placeholder="Email"
+            ref={emailRef}
+            required
+            className="w-full mb-4 px-4 py-2 rounded-lg bg-white/5 text-white"
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            ref={passwordRef}
+            required
+            className="w-full mb-6 px-4 py-2 rounded-lg bg-white/5 text-white"
+          />
+
+          <label className="text-xs text-white/60 mb-1 block">
+            Vedic name (if any)
+          </label>
+          <input
+            type="text"
+            placeholder="Full name"
+            ref={nameRef}
+            required
+            className="w-full mb-6 px-4 py-2 rounded-lg bg-white/5 text-white"
+          />
+
+          <label className="text-xs text-white/60 mb-1 block">
+            Date of Birth
+          </label>
+          <input
+            type="date"
+            ref={dobRef}
+            required
+            className="w-full mb-6 px-4 py-2 rounded-lg bg-white/5 text-white"
+          />
+
+          <label className="text-xs text-white/60 mb-1 block">
+            Time of Birth
+          </label>
+          <input
+            type="time"
+            ref={tobRef}
+            required
+            className="w-full mb-6 px-4 py-2 rounded-lg bg-white/5 text-white"
+          />
+
+          <label className="text-xs text-white/60 mb-1 block">
+            Try to give the exact location
+          </label>
+          <input
+            type="text"
+            placeholder="Place of birth"
+            ref={placeRef}
+            required
+            className="w-full mb-6 px-4 py-2 rounded-lg bg-white/5 text-white"
+          />
 
           <button
             type="submit"
@@ -128,10 +227,17 @@ export default function RegisterForm() {
             <h3 className="text-lg font-semibold mb-3">
               AI is analysing your input 🔮
             </h3>
-            <p className="text-white/70 text-sm mb-4">
+
+            <p className="text-white/70 text-sm mb-3">
               Making your kundali.  
-              Please wait…
-              don't worry... this will only happen one time only
+              Please wait…  
+              don’t worry, this happens only once.
+            </p>
+            <p>Till then enjoy these facts...</p>
+
+            {/* 🧠 FACT DISPLAY */}
+            <p className="text-sm text-white/60 italic mb-4">
+              {fact}
             </p>
 
             <div className="text-3xl font-bold text-cyan-400">
