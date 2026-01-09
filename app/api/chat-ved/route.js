@@ -1,61 +1,176 @@
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
+import mongoose from "mongoose";
+import { User } from "../../lib/model/schema";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { connectionSRT } from "../../lib/db";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINIAPI);
-
-export async function POST(req) {
+export async function GET() {
   try {
-    const { message, user } = await req.json();
+    // 🔐 AUTH
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    if (!message || !user) {
-      return NextResponse.json(
-        { error: "Invalid payload" },
-        { status: 400 }
-      );
+    // 🗄️ DB
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(connectionSRT);
+    }
+
+    const user = await User.findOne({ email: session.user.email }).lean();
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const kundali = user.kundaliSnapshots?.[0];
+    if (!kundali) {
+      return NextResponse.json({ error: "Kundali not found" }, { status: 404 });
+    }
 
-    const systemPrompt = `
-You are an AI named **VED**.
+    // 📄 PDF SETUP
+    const pdfDoc = await PDFDocument.create();
+    let page = pdfDoc.addPage([595, 842]); // A4
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-You are:
-- A calm, wise, professional Vedic astrologer
-- You speak clearly, confidently, and compassionately
-- You NEVER say "as an AI model"
-- You answer using Vedic astrology logic
+    let y = 800;
 
-USER PROFILE:
-Name: ${user.name}
-DOB: ${user.dob}
-TOB: ${user.tob}
-Place: ${user.place}
+    // 🔁 HELPERS
+    const newPageIfNeeded = () => {
+      if (y < 60) {
+        page = pdfDoc.addPage([595, 842]);
+        y = 800;
+      }
+    };
 
-KUNDALI DATA:
-${JSON.stringify(kundali, null, 2)}
+    const drawLine = (text, size = 12) => {
+      page.drawText(text, {
+        x: 40,
+        y,
+        size,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      y -= size + 6;
+      newPageIfNeeded();
+    };
 
-INSTRUCTIONS:
-- Answer the user's question astrologically
-- Use kundali references when relevant
-- Be grounded, not mystical nonsense
-- If unsure, give probabilistic guidance
-- output should be within 100 words
-- if user asks one liner answer not related to your business answer him the relevant answer 
-`;
+    const wrapText = (text, maxChars = 85) => {
+      const words = text.split(" ");
+      const lines = [];
+      let line = "";
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      systemInstruction: systemPrompt,
+      for (const word of words) {
+        if ((line + word).length <= maxChars) {
+          line += word + " ";
+        } else {
+          lines.push(line.trim());
+          line = word + " ";
+        }
+      }
+      if (line) lines.push(line.trim());
+      return lines;
+    };
+
+    const drawParagraph = (text, size = 12) => {
+      wrapText(text).forEach((line) => drawLine(line, size));
+      y -= 4;
+    };
+
+    const drawHeading = (text) => {
+      y -= 12;
+      drawLine(text.toUpperCase(), 15);
+      drawLine("────────────────────────────────────────", 10);
+    };
+
+    /* ─────────────── COVER ─────────────── */
+
+    drawLine("KUNDALIX", 22);
+    drawLine("AI-POWERED VEDIC KUNDALI REPORT", 14);
+    drawLine("");
+    drawLine(`Name: ${user.name}`);
+    drawLine(`Date of Birth: ${user.dob}`);
+    drawLine(`Time of Birth: ${user.tob}`);
+    drawLine(`Place of Birth: ${user.place}`);
+    drawLine("");
+    drawLine(`Generated on: ${new Date().toLocaleString()}`);
+    y -= 20;
+
+    /* ─────────────── BASIC PROFILE ─────────────── */
+
+    drawHeading("Basic Profile");
+    drawLine(`Sun Sign: ${kundali.basicProfile.sunSign}`);
+    drawLine(`Moon Sign: ${kundali.basicProfile.moonSign}`);
+    drawLine(`Ascendant: ${kundali.basicProfile.ascendant}`);
+    drawLine(`Nakshatra: ${kundali.basicProfile.nakshatra}`);
+    drawLine(`Ruling Planet: ${kundali.basicProfile.rulingPlanet}`);
+
+    /* ─────────────── LIFE DOMAINS ─────────────── */
+
+    drawHeading("Life Domains");
+    Object.entries(kundali.lifeDomains).forEach(([key, value]) => {
+      drawLine(`${key.toUpperCase()}:`, 13);
+      drawParagraph(value);
     });
 
-    const result = await model.generateContent(message);
-    const text = result.response.text();
+    /* ─────────────── PLANETARY POSITIONS ─────────────── */
 
-    return NextResponse.json({ reply: text });
+    drawHeading("Planetary Positions");
+    Object.entries(kundali.planetaryPositions).forEach(([planet, data]) => {
+      drawLine(
+        `${planet.toUpperCase()} — ${data.sign} · House ${data.house}`,
+        13
+      );
+      drawParagraph(data.traits);
+    });
+
+    /* ─────────────── YOGAS ─────────────── */
+
+    drawHeading("Yogas");
+    kundali.yogas.forEach((yoga) => {
+      drawLine(yoga.name, 13);
+      drawParagraph(yoga.meaning);
+    });
+
+    /* ─────────────── GUIDANCE ─────────────── */
+
+    drawHeading("Guidance");
+
+    drawLine("Strengths:", 13);
+    kundali.guidance.strengths.forEach((s) =>
+      drawLine(`• ${s}`)
+    );
+
+    drawLine("");
+    drawLine("Challenges:", 13);
+    kundali.guidance.challenges.forEach((c) =>
+      drawLine(`• ${c}`)
+    );
+
+    drawLine("");
+    drawLine("Advice:", 13);
+    drawParagraph(kundali.guidance.advice);
+
+    /* ─────────────── FOOTER ─────────────── */
+
+    y -= 20;
+    drawLine("— End of Kundali Report —", 10);
+    drawLine("Generated by Kundalix AI · Vedic System", 9);
+
+    // 📦 EXPORT
+    const pdfBytes = await pdfDoc.save();
+
+    return new NextResponse(Buffer.from(pdfBytes), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": "attachment; filename=kundali-report.pdf",
+      },
+    });
   } catch (err) {
-    console.error("VED CHAT ERROR:", err);
+    console.error("PDF ERROR:", err);
     return NextResponse.json(
-      { error: "Chat failed" },
+      { error: "PDF generation failed" },
       { status: 500 }
     );
   }
