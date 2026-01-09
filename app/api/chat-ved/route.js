@@ -40,7 +40,7 @@ INSTRUCTIONS:
 - Be grounded, not mystical nonsense
 - If unsure, give probabilistic guidance
 - output should be within 100 words
-- if user asks one liner answer not related to your business answer him the relevant answer 
+- if user asks one liner answer not related to your business answer him the relevant answer
 `;
 
     const model = genAI.getGenerativeModel({
