@@ -1,176 +1,61 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
-import mongoose from "mongoose";
-import { User } from "../../lib/model/schema";
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import { connectionSRT } from "../../lib/db";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export async function GET() {
+const genAI = new GoogleGenerativeAI(process.env.GEMINIAPI);
+
+export async function POST(req) {
   try {
-    // 🔐 AUTH
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { message, user } = await req.json();
 
-    // 🗄️ DB
-    if (mongoose.connection.readyState === 0) {
-      await mongoose.connect(connectionSRT);
-    }
-
-    const user = await User.findOne({ email: session.user.email }).lean();
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!message || !user) {
+      return NextResponse.json(
+        { error: "Invalid payload" },
+        { status: 400 }
+      );
     }
 
     const kundali = user.kundaliSnapshots?.[0];
-    if (!kundali) {
-      return NextResponse.json({ error: "Kundali not found" }, { status: 404 });
-    }
 
-    // 📄 PDF SETUP
-    const pdfDoc = await PDFDocument.create();
-    let page = pdfDoc.addPage([595, 842]); // A4
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const systemPrompt = `
+You are an AI named **VED**.
 
-    let y = 800;
+You are:
+- A calm, wise, professional Vedic astrologer
+- You speak clearly, confidently, and compassionately
+- You NEVER say "as an AI model"
+- You answer using Vedic astrology logic
 
-    // 🔁 HELPERS
-    const newPageIfNeeded = () => {
-      if (y < 60) {
-        page = pdfDoc.addPage([595, 842]);
-        y = 800;
-      }
-    };
+USER PROFILE:
+Name: ${user.name}
+DOB: ${user.dob}
+TOB: ${user.tob}
+Place: ${user.place}
 
-    const drawLine = (text, size = 12) => {
-      page.drawText(text, {
-        x: 40,
-        y,
-        size,
-        font,
-        color: rgb(0, 0, 0),
-      });
-      y -= size + 6;
-      newPageIfNeeded();
-    };
+KUNDALI DATA:
+${JSON.stringify(kundali, null, 2)}
 
-    const wrapText = (text, maxChars = 85) => {
-      const words = text.split(" ");
-      const lines = [];
-      let line = "";
+INSTRUCTIONS:
+- Answer the user's question astrologically
+- Use kundali references when relevant
+- Be grounded, not mystical nonsense
+- If unsure, give probabilistic guidance
+- output should be within 100 words
+- if user asks one liner answer not related to your business answer him the relevant answer 
+`;
 
-      for (const word of words) {
-        if ((line + word).length <= maxChars) {
-          line += word + " ";
-        } else {
-          lines.push(line.trim());
-          line = word + " ";
-        }
-      }
-      if (line) lines.push(line.trim());
-      return lines;
-    };
-
-    const drawParagraph = (text, size = 12) => {
-      wrapText(text).forEach((line) => drawLine(line, size));
-      y -= 4;
-    };
-
-    const drawHeading = (text) => {
-      y -= 12;
-      drawLine(text.toUpperCase(), 15);
-      drawLine("────────────────────────────────────────", 10);
-    };
-
-    /* ─────────────── COVER ─────────────── */
-
-    drawLine("KUNDALIX", 22);
-    drawLine("AI-POWERED VEDIC KUNDALI REPORT", 14);
-    drawLine("");
-    drawLine(`Name: ${user.name}`);
-    drawLine(`Date of Birth: ${user.dob}`);
-    drawLine(`Time of Birth: ${user.tob}`);
-    drawLine(`Place of Birth: ${user.place}`);
-    drawLine("");
-    drawLine(`Generated on: ${new Date().toLocaleString()}`);
-    y -= 20;
-
-    /* ─────────────── BASIC PROFILE ─────────────── */
-
-    drawHeading("Basic Profile");
-    drawLine(`Sun Sign: ${kundali.basicProfile.sunSign}`);
-    drawLine(`Moon Sign: ${kundali.basicProfile.moonSign}`);
-    drawLine(`Ascendant: ${kundali.basicProfile.ascendant}`);
-    drawLine(`Nakshatra: ${kundali.basicProfile.nakshatra}`);
-    drawLine(`Ruling Planet: ${kundali.basicProfile.rulingPlanet}`);
-
-    /* ─────────────── LIFE DOMAINS ─────────────── */
-
-    drawHeading("Life Domains");
-    Object.entries(kundali.lifeDomains).forEach(([key, value]) => {
-      drawLine(`${key.toUpperCase()}:`, 13);
-      drawParagraph(value);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      systemInstruction: systemPrompt,
     });
 
-    /* ─────────────── PLANETARY POSITIONS ─────────────── */
+    const result = await model.generateContent(message);
+    const text = result.response.text();
 
-    drawHeading("Planetary Positions");
-    Object.entries(kundali.planetaryPositions).forEach(([planet, data]) => {
-      drawLine(
-        `${planet.toUpperCase()} — ${data.sign} · House ${data.house}`,
-        13
-      );
-      drawParagraph(data.traits);
-    });
-
-    /* ─────────────── YOGAS ─────────────── */
-
-    drawHeading("Yogas");
-    kundali.yogas.forEach((yoga) => {
-      drawLine(yoga.name, 13);
-      drawParagraph(yoga.meaning);
-    });
-
-    /* ─────────────── GUIDANCE ─────────────── */
-
-    drawHeading("Guidance");
-
-    drawLine("Strengths:", 13);
-    kundali.guidance.strengths.forEach((s) =>
-      drawLine(`• ${s}`)
-    );
-
-    drawLine("");
-    drawLine("Challenges:", 13);
-    kundali.guidance.challenges.forEach((c) =>
-      drawLine(`• ${c}`)
-    );
-
-    drawLine("");
-    drawLine("Advice:", 13);
-    drawParagraph(kundali.guidance.advice);
-
-    /* ─────────────── FOOTER ─────────────── */
-
-    y -= 20;
-    drawLine("— End of Kundali Report —", 10);
-    drawLine("Generated by Kundalix AI · Vedic System", 9);
-
-    // 📦 EXPORT
-    const pdfBytes = await pdfDoc.save();
-
-    return new NextResponse(Buffer.from(pdfBytes), {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": "attachment; filename=kundali-report.pdf",
-      },
-    });
+    return NextResponse.json({ reply: text });
   } catch (err) {
-    console.error("PDF ERROR:", err);
+    console.error("VED CHAT ERROR:", err);
     return NextResponse.json(
-      { error: "PDF generation failed" },
+      { error: "Chat failed" },
       { status: 500 }
     );
   }

@@ -8,18 +8,17 @@ import { connectionSRT } from "../../lib/db";
 
 export async function GET() {
   try {
-    // 1️⃣ AUTH
+    // 🔐 AUTH
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2️⃣ DB CONNECT
+    // 🗄️ DB
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(connectionSRT);
     }
 
-    // 3️⃣ FETCH USER
     const user = await User.findOne({ email: session.user.email }).lean();
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -27,94 +26,145 @@ export async function GET() {
 
     const kundali = user.kundaliSnapshots?.[0];
     if (!kundali) {
-      return NextResponse.json({ error: "No kundali found" }, { status: 404 });
+      return NextResponse.json({ error: "Kundali not found" }, { status: 404 });
     }
 
-    // 4️⃣ CREATE PDF
+    // 📄 PDF SETUP
     const pdfDoc = await PDFDocument.create();
     let page = pdfDoc.addPage([595, 842]); // A4
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
     let y = 800;
 
-    const draw = (text = "", size = 12) => {
-      page.drawText(String(text), {
-        x: 40,
-        y,
-        size,
-        font,
-        color: rgb(0, 0, 0), // 🔥 BLACK TEXT (FIX)
-        maxWidth: 515,
-        lineHeight: size + 4,
-      });
-
-      y -= size + 8;
-
+    // 🔁 HELPERS
+    const newPageIfNeeded = () => {
       if (y < 60) {
-        page = pdfDoc.addPage([595, 842]); // 🔥 PAGE SWITCH (FIX)
+        page = pdfDoc.addPage([595, 842]);
         y = 800;
       }
     };
 
-    // 5️⃣ CONTENT
-    draw("KUNDALIX — VEDIC KUNDALI REPORT", 18);
-    draw("—————————————————————————————");
-    draw("");
+    const drawLine = (text, size = 12) => {
+      page.drawText(text, {
+        x: 40,
+        y,
+        size,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      y -= size + 6;
+      newPageIfNeeded();
+    };
 
-    draw(`Name: ${user.name}`);
-    draw(`Date of Birth: ${user.dob}`);
-    draw(`Time of Birth: ${user.tob}`);
-    draw(`Place of Birth: ${user.place}`);
+    const wrapText = (text, maxChars = 85) => {
+      const words = text.split(" ");
+      const lines = [];
+      let line = "";
 
-    draw("");
-    draw("BASIC PROFILE", 14);
-    draw(`Sun Sign: ${kundali.basicProfile.sunSign}`);
-    draw(`Moon Sign: ${kundali.basicProfile.moonSign}`);
-    draw(`Ascendant: ${kundali.basicProfile.ascendant}`);
-    draw(`Nakshatra: ${kundali.basicProfile.nakshatra}`);
-    draw(`Ruling Planet: ${kundali.basicProfile.rulingPlanet}`);
+      for (const word of words) {
+        if ((line + word).length <= maxChars) {
+          line += word + " ";
+        } else {
+          lines.push(line.trim());
+          line = word + " ";
+        }
+      }
+      if (line) lines.push(line.trim());
+      return lines;
+    };
 
-    draw("");
-    draw("LIFE DOMAINS", 14);
+    const drawParagraph = (text, size = 12) => {
+      wrapText(text).forEach((line) => drawLine(line, size));
+      y -= 4;
+    };
+
+    const drawHeading = (text) => {
+      y -= 12;
+      drawLine(text.toUpperCase(), 15);
+      drawLine("────────────────────────────────────────", 10);
+    };
+
+    /* ─────────────── COVER ─────────────── */
+
+    drawLine("KUNDALIX", 22);
+    drawLine("AI-POWERED VEDIC KUNDALI REPORT", 14);
+    drawLine("");
+    drawLine(`Name: ${user.name}`);
+    drawLine(`Date of Birth: ${user.dob}`);
+    drawLine(`Time of Birth: ${user.tob}`);
+    drawLine(`Place of Birth: ${user.place}`);
+    drawLine("");
+    drawLine(`Generated on: ${new Date().toLocaleString()}`);
+    y -= 20;
+
+    /* ─────────────── BASIC PROFILE ─────────────── */
+
+    drawHeading("Basic Profile");
+    drawLine(`Sun Sign: ${kundali.basicProfile.sunSign}`);
+    drawLine(`Moon Sign: ${kundali.basicProfile.moonSign}`);
+    drawLine(`Ascendant: ${kundali.basicProfile.ascendant}`);
+    drawLine(`Nakshatra: ${kundali.basicProfile.nakshatra}`);
+    drawLine(`Ruling Planet: ${kundali.basicProfile.rulingPlanet}`);
+
+    /* ─────────────── LIFE DOMAINS ─────────────── */
+
+    drawHeading("Life Domains");
     Object.entries(kundali.lifeDomains).forEach(([key, value]) => {
-      draw(`${key.toUpperCase()}:`);
-      draw(value);
-      draw("");
+      drawLine(`${key.toUpperCase()}:`, 13);
+      drawParagraph(value);
     });
 
-    draw("PLANETARY POSITIONS", 14);
+    /* ─────────────── PLANETARY POSITIONS ─────────────── */
+
+    drawHeading("Planetary Positions");
     Object.entries(kundali.planetaryPositions).forEach(([planet, data]) => {
-      draw(
-        `${planet.toUpperCase()}: ${data.sign} · House ${data.house}`
+      drawLine(
+        `${planet.toUpperCase()} — ${data.sign} · House ${data.house}`,
+        13
       );
-      draw(data.traits);
-      draw("");
+      drawParagraph(data.traits);
     });
 
-    draw("YOGAS", 14);
+    /* ─────────────── YOGAS ─────────────── */
+
+    drawHeading("Yogas");
     kundali.yogas.forEach((yoga) => {
-      draw(`${yoga.name}:`);
-      draw(yoga.meaning);
-      draw("");
+      drawLine(yoga.name, 13);
+      drawParagraph(yoga.meaning);
     });
 
-    draw("GUIDANCE", 14);
-    draw("Strengths:");
-    kundali.guidance.strengths.forEach((s) => draw(`• ${s}`));
-    draw("");
-    draw("Challenges:");
-    kundali.guidance.challenges.forEach((c) => draw(`• ${c}`));
-    draw("");
-    draw("Advice:");
-    draw(kundali.guidance.advice);
+    /* ─────────────── GUIDANCE ─────────────── */
 
-    // 6️⃣ FINALIZE
+    drawHeading("Guidance");
+
+    drawLine("Strengths:", 13);
+    kundali.guidance.strengths.forEach((s) =>
+      drawLine(`• ${s}`)
+    );
+
+    drawLine("");
+    drawLine("Challenges:", 13);
+    kundali.guidance.challenges.forEach((c) =>
+      drawLine(`• ${c}`)
+    );
+
+    drawLine("");
+    drawLine("Advice:", 13);
+    drawParagraph(kundali.guidance.advice);
+
+    /* ─────────────── FOOTER ─────────────── */
+
+    y -= 20;
+    drawLine("— End of Kundali Report —", 10);
+    drawLine("Generated by Kundalix AI · Vedic System", 9);
+
+    // 📦 EXPORT
     const pdfBytes = await pdfDoc.save();
 
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": "attachment; filename=kundali.pdf",
+        "Content-Disposition": "attachment; filename=kundali-report.pdf",
       },
     });
   } catch (err) {
