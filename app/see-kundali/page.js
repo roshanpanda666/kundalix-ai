@@ -59,18 +59,31 @@ export default function KundaliPage() {
           Vedic Kundali Overview
         </p>
 
-        <div className="flex justify-center items-center">
+        <div className="flex justify-center items-center flex-col">
 
         <div className="h-12 rounded-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 w-80 flex justify-center items-center">
             <Link href="/chat-ved">
-            <dev className="text-white">
+            <div className="text-white">
                 <button>
                     chat about these information with ai
                 </button>
-            </dev>
+            </div>
             </Link>
             
+            
         </div>
+
+        <div className="mt-3.5">
+
+            <a
+                href="/api/kundali-pdf"
+                target="_blank"
+                className="h-12 w-80 rounded-3xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 flex justify-center items-center text-white font-medium"
+            >
+                Download Kundali PDF 📄
+            </a>
+
+            </div>
 
         </div>
 
