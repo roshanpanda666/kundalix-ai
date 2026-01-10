@@ -16,7 +16,7 @@ export default function RegisterForm() {
 
   // 🔒 EXISTING STATE
   const [showModal, setShowModal] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(40);
+  const [timeLeft, setTimeLeft] = useState(50);
   const [locked, setLocked] = useState(false);
 
   // 🧠 NEW: FACT STATE (ONLY ADDITION)
@@ -40,14 +40,6 @@ export default function RegisterForm() {
     let tob = tobRef.current.value;
     let place = placeRef.current.value;
 
-    // keeping alerts untouched
-    alert(username);
-    alert(email);
-    alert(password);
-    alert(name);
-    alert(dob);
-    alert(tob);
-    alert(place);
 
     try {
       await thirdfunction({

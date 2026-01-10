@@ -78,35 +78,51 @@ export async function GET() {
     draw("LIFE DOMAINS", 14);
     Object.entries(kundali.lifeDomains).forEach(([key, value]) => {
       draw(`${key.toUpperCase()}:`);
+      draw("");
       draw(value);
       draw("");
+      draw("");
+
     });
+
 
     draw("PLANETARY POSITIONS", 14);
     Object.entries(kundali.planetaryPositions).forEach(([planet, data]) => {
       draw(
         `${planet.toUpperCase()}: ${data.sign} · House ${data.house}`
       );
+      draw("");
       draw(data.traits);
       draw("");
+      draw("");
+
     });
 
     draw("YOGAS", 14);
     kundali.yogas.forEach((yoga) => {
       draw(`${yoga.name}:`);
+      draw("");
       draw(yoga.meaning);
       draw("");
+      draw("");
+
     });
 
     draw("GUIDANCE", 14);
+    draw("");
     draw("Strengths:");
+    draw("");
     kundali.guidance.strengths.forEach((s) => draw(`• ${s}`));
+    draw("");
     draw("");
     draw("Challenges:");
     kundali.guidance.challenges.forEach((c) => draw(`• ${c}`));
     draw("");
+
     draw("Advice:");
+    draw("");
     draw(kundali.guidance.advice);
+
 
     // 6️⃣ FINALIZE
     const pdfBytes = await pdfDoc.save();
