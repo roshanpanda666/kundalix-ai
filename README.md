@@ -2,6 +2,8 @@
 
 **AI‑Powered Vedic Kundali, Horoscope & Event‑Driven Astrology Platform**
 
+kundalix-ai.vercel.app
+
 Kundalix.AI is a **production‑grade, event‑driven full‑stack application** that blends **Vedic astrology**, **AI‑generated insights**, and **modern orchestration patterns** using **Next.js, Inngest, and Server Actions**.
 
 The system is designed not just to *work*, but to **scale**, **orchestrate long‑running tasks**, and **separate concerns cleanly**—mirroring real‑world backend and system‑design practices.
@@ -48,6 +50,14 @@ Kundalix.AI demonstrates:
 * Real production constraints (serverless runtimes, scraping limitations, auth boundaries)
 
 ---
+
+<p align="center">
+  <img src="docs/architecture.png" alt="Kundalix Architecture" width="800" />
+</p>
+
+<p align="center">
+  <em>architecture and data flow diagram of Kundalix</em>
+</p>
 
 ## 🧩 Tech Stack
 
