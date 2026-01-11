@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import mongoose from "mongoose";
-import { JSDOM } from "jsdom";
+import * as cheerio from "cheerio";
 
 import { authOptions } from "../auth/[...nextauth]/route";
 import { connectionSRT } from "../../lib/db";
@@ -21,12 +21,12 @@ export async function GET() {
       );
     }
 
-    // 2️⃣ DB CONNECT (SAFE)
+    // 2️⃣ DB
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(connectionSRT);
     }
 
-    // 3️⃣ FETCH ONLY MOON SIGN
+    // 3️⃣ MOON SIGN
     const user = await User.findById(session.user.id).select(
       "kundaliSnapshots.basicProfile.moonSign"
     );
@@ -50,10 +50,9 @@ export async function GET() {
 
     const moonSign = moonSignRaw.toLowerCase().trim();
 
-    // 4️⃣ BUILD DYNAMIC URL
+    // 4️⃣ FETCH PAGE
     const url = `https://www.astrology.com/horoscope/daily/${moonSign}.html`;
 
-    // 5️⃣ FETCH HOROSCOPE PAGE
     const res = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0",
@@ -62,49 +61,44 @@ export async function GET() {
     });
 
     if (!res.ok) {
-      return NextResponse.json(
-        { success: false, error: "Failed to fetch horoscope" },
-        { status: 500 }
-      );
+      throw new Error("Failed to fetch horoscope page");
     }
 
     const html = await res.text();
 
-    // 6️⃣ PARSE HTML → TEXT
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
+    // 5️⃣ PARSE WITH CHEERIO (SAFE)
+    const $ = cheerio.load(html);
 
-    const paragraphs = document.querySelectorAll("main p");
+    let horoscope = "";
 
-    let text = "";
-
-    paragraphs.forEach((p) => {
-      const value = p.textContent?.trim();
-      if (value && value.length > 40) {
-        text += value + "\n\n";
+    $("main p").each((_, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 60) {
+        horoscope += text + "\n\n";
       }
     });
 
-    // 7️⃣ FALLBACK (DOM changes protection)
-    if (!text) {
-      const meta = document.querySelector('meta[name="description"]');
-      if (meta) text = meta.getAttribute("content") || "";
+    // 6️⃣ FALLBACK
+    if (!horoscope) {
+      horoscope =
+        $('meta[name="description"]').attr("content") ||
+        "Horoscope not available today.";
     }
 
-    // 8️⃣ RETURN CLEAN RESPONSE
+    // 7️⃣ RETURN
     return NextResponse.json({
       success: true,
       data: {
-        moonSign,              // "leo"
-        moonSignLabel: moonSignRaw, // "Leo"
+        moonSign,
+        moonSignLabel: moonSignRaw,
         date: new Date().toISOString().split("T")[0],
-        horoscope: text.trim(),
+        horoscope: horoscope.trim(),
         source: "astrology.com",
       },
     });
 
   } catch (err) {
-    console.error("MOON HOROSCOPE ERROR:", err);
+    console.error("HOROSCOPE PROD ERROR:", err);
 
     return NextResponse.json(
       { success: false, error: "Internal server error" },
