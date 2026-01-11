@@ -1,3 +1,4 @@
+import InstallButton from "./components/InstallButton";
 type StepCardProps = {
   step: string;
   title: string;
@@ -9,6 +10,9 @@ export default function Page() {
     <main className="min-h-screen bg-gradient-to-br from-[#020617] via-blue-950 to-[#020617] text-white flex flex-col items-center justify-center px-6">
 
       {/* HERO TEXT */}
+      <div className="flex items-center gap-3">
+        <InstallButton />
+      </div>
       <div className="max-w-3xl text-center space-y-6">
         <h1 className="text-4xl md:text-5xl font-bold leading-tight">
           Discover Your Life Map 🌙
