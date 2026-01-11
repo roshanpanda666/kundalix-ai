@@ -73,6 +73,8 @@ export default function KundaliPage() {
             
         </div>
 
+        
+
         <div className="mt-3.5">
 
             <a
@@ -86,6 +88,22 @@ export default function KundaliPage() {
             </div>
 
         </div>
+
+        <div className="justify-center items-center flex mt-4">
+        <div className="h-12 w-80 rounded-3xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 flex justify-center items-center text-white font-medium">
+            <Link href="/horoscope">
+            <div className="text-white">
+                <button>
+                    Today's Horoscope
+                </button>
+            </div>
+            </Link>
+            
+            
+        </div>
+        </div>
+
+        
 
       </div>
 

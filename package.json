@@ -11,8 +11,11 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^3.0.3",
+    "cheerio": "^1.1.2",
     "dotenv": "^17.2.3",
+    "horoscope": "^2.0.1",
     "inngest": "^3.48.1",
+    "jsdom": "^27.4.0",
     "lucide-react": "^0.562.0",
     "mongoose": "^9.1.2",
     "next": "16.1.1",

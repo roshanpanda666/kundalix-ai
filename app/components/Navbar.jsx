@@ -37,6 +37,14 @@ export default function Navbar() {
               </Link>
 
               <Link
+                href="/horoscope"
+                onClick={() => setOpen(false)}
+                className="block text-white/80"
+              >
+                today's horoscope
+              </Link>
+
+              <Link
                 href="/chat-ved"
                 className="text-fuchsia-400/80 hover:text-purple-500 transition"
               >
@@ -97,6 +105,14 @@ export default function Navbar() {
                 className="block text-white/80"
               >
                 See Kundali
+              </Link>
+
+              <Link
+                href="/horoscope"
+                onClick={() => setOpen(false)}
+                className="block text-white/80"
+              >
+                Today's horoscope
               </Link>
 
               <Link
