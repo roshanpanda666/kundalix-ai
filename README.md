@@ -52,7 +52,7 @@ Kundalix.AI demonstrates:
 ---
 
 <p align="center">
-  <img src="docs/architecture.png" alt="Kundalix Architecture" width="800" />
+  <img src="architecture.png" alt="Kundalix Architecture" width="800" />
 </p>
 
 <p align="center">
