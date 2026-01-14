@@ -1,5 +1,9 @@
 import mongoose from "mongoose";
 
+/* ================================
+   Kundali Snapshot Schema
+   ================================ */
+
 const KundaliSnapshotSchema = new mongoose.Schema(
   {
     generatedAt: {
@@ -13,7 +17,10 @@ const KundaliSnapshotSchema = new mongoose.Schema(
     },
 
     meta: {
-      system: { type: String, default: "vedic" },
+      system: {
+        type: String,
+        default: "vedic",
+      },
     },
 
     birthDetails: {
@@ -79,28 +86,97 @@ const KundaliSnapshotSchema = new mongoose.Schema(
       advice: String,
     },
 
-    // 🔁 For future use (daily horoscope, predictions)
+    // 🔁 Extension zone (future predictions, summaries, etc.)
     derivedData: {
-      type: Object, // flexible extension zone
+      type: Object,
       default: {},
     },
   },
   { _id: false }
 );
 
+/* ================================
+   Kundali Image Upload Schema
+   ================================ */
+
+const KundaliImageSchema = new mongoose.Schema(
+  {
+    imageBase64: {
+      type: String, // compressed base64 string
+      required: true,
+    },
+
+    uploadedAt: {
+      type: Date,
+      default: Date.now,
+    },
+
+    analyzed: {
+      type: Boolean,
+      default: false,
+    },
+
+    aiInsights: {
+      type: String, // AI-generated analysis
+    },
+  },
+  { _id: true }
+);
+
+/* ================================
+   User Schema
+   ================================ */
+
 const userSchema = new mongoose.Schema(
   {
-    username: { type: String, required: true, unique: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
 
-    name: { type: String, required: true },
-    dob: { type: String, required: true },
-    tob: { type: String, required: true },
-    place: { type: String, required: true },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
 
+    password: {
+      type: String,
+      required: true,
+    },
+
+    name: {
+      type: String,
+      required: true,
+    },
+
+    dob: {
+      type: String,
+      required: true,
+    },
+
+    tob: {
+      type: String,
+      required: true,
+    },
+
+    place: {
+      type: String,
+      required: true,
+    },
+
+    /* 🔮 Generated Kundali Snapshots */
     kundaliSnapshots: {
       type: [KundaliSnapshotSchema],
+      default: [],
+    },
+
+    /* 📸 Uploaded Kundali Images (AI Vision Analysis) */
+    kundaliImageUploads: {
+      type: [KundaliImageSchema],
       default: [],
     },
   },
@@ -109,6 +185,10 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+/* ================================
+   Model Export (Safe for Hot Reload)
+   ================================ */
 
 export const User =
   mongoose.models.User || mongoose.model("User", userSchema);
